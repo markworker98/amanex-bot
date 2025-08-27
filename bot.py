@@ -1245,6 +1245,3 @@ def main():
     except Exception as e:
         logging.exception("Polling crashed: %s", e)
         time.sleep(3)
-
-if __name__ == "__main__":
-    main()
