@@ -1,32 +1,26 @@
-from flask import Flask, request
 import os
-import telebot
-
-# --- Telegram Bot setup ---
-TOKEN = os.environ.get("BOT_TOKEN")
-bot = telebot.TeleBot(TOKEN)
+from threading import Thread
+from flask import Flask
+from bot import main as run_bot  # نستورد دالة تشغيل البوت فقط
 
 app = Flask(__name__)
 
-# --- Flask route for webhook ---
-@app.route(f"/{TOKEN}", methods=["POST"])
-def webhook():
-    json_str = request.get_data().decode("UTF-8")
-    update = telebot.types.Update.de_json(json_str)
-    bot.process_new_updates([update])
-    return "!", 200
+@app.get("/")
+def health():
+    return "OK", 200
 
-# --- Home route (to check if service is running) ---
-@app.route("/", methods=["GET"])
-def home():
-    return "Bot is running on Render!"
+def _start_bot():
+    # تشغيل البوت في ثريد منفصل لأن infinity_polling بلوكيـنغ
+    try:
+        run_bot()
+    except Exception as e:
+        # اطبع الخطأ في اللوجز
+        print(f"[server] bot crashed: {e}", flush=True)
 
-# --- Example command handler ---
-@bot.message_handler(commands=["start"])
-def send_welcome(message):
-    bot.reply_to(message, "Hello 👋, your bot is up and running on Render!")
-
-# --- Main entry point ---
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # Render provides PORT
+    # شغّل البوت بالخلفية
+    Thread(target=_start_bot, daemon=True).start()
+    # افتح بورت كما تطلب Render (من متغير البيئة PORT)
+    port = int(os.environ.get("PORT", "10000"))
+    # لازم 0.0.0.0 وليس 127.0.0.1
     app.run(host="0.0.0.0", port=port)
