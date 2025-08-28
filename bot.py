@@ -1239,6 +1239,7 @@ def main():
     print("🚀 Amanex bot starting (Termux ready).")
     migrate_db()
     try:
+        ()bot.remove_webhook
         bot.infinity_polling(timeout=30, long_polling_timeout=30, skip_pending=True)
     except KeyboardInterrupt:
         print("\n🛑 تم الإيقاف اليدوي.")
