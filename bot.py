@@ -31,6 +31,8 @@ from dotenv import load_dotenv
 import telebot
 from telebot import types
 
+from telebot.apihelper import ApiTelegramException
+
 # =========================[ تحميل متغيرات البيئة ]====================
 # تأكد أن لديك ملف .env في نفس المجلد يحتوي القيم المطلوبة.
 load_dotenv()
@@ -1236,13 +1238,23 @@ def show_my_items(msg: types.Message):
 
 # ===========================[ تشغيل البوت ]===========================
 def main():
-    print("🚀 Amanex bot starting (Termux ready).")
+    print("🚀 Amanex bot starting (Render ready).")
     migrate_db()
-    try:
-        bot.remove_webhook()
-        bot.infinity_polling(timeout=30, long_polling_timeout=30, skip_pending=True)
-    except KeyboardInterrupt:
-        print("\n🛑 تم الإيقاف اليدوي.")
-    except Exception as e:
-        logging.exception("Polling crashed: %s", e)
-        time.sleep(3)
+
+    while True:  # نحاول نعيد التشغيل إذا وقع خطأ
+        try:
+            bot.infinity_polling(timeout=30, long_polling_timeout=30, skip_pending=True)
+        except ApiTelegramException as e:
+            if e.error_code == 409:
+                logging.warning("⚠️ Conflict 409: Another polling session detected. Retrying in 5s...")
+                time.sleep(5)
+                continue  # أعد المحاولة
+            else:
+                logging.exception("Telegram API error: %s", e)
+                time.sleep(5)
+        except KeyboardInterrupt:
+            print("\n🛑 تم الإيقاف اليدوي.")
+            break
+        except Exception as e:
+            logging.exception("Polling crashed: %s", e)
+            time.sleep(5)
